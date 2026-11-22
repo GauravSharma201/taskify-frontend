@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, ChartLine, KeyRound, Plus, SquareKanban, Trash2 } from "lucide-react";
+import { ArrowRight, ChartLine, KeyRound, Lock, MailCheck, Plus, SquareKanban, Trash2 } from "lucide-react";
 
 import { BoardColumn } from "@/components/common/board-column";
 import { FeatureCard } from "@/components/common/feature-card";
 import { FormCheckbox } from "@/components/common/form-checkbox";
 import { FocusFirstError, FormErrorBanner } from "@/components/common/form-error-banner";
 import { FormPasswordField, FormTextField } from "@/components/common/form-text-field";
+import { IconBadge } from "@/components/common/icon-badge";
 import { IssueTypeIcon } from "@/components/common/issue-type-icon";
 import { Logo } from "@/components/common/logo";
 import { PasswordInput } from "@/components/common/password-input";
@@ -70,6 +71,7 @@ const GROUPS: { title: string; folder: string; entries: Entry[] }[] = [
       { id: "task-card", name: "TaskCard", path: "components/common/task-card.tsx" },
       { id: "board-column", name: "BoardColumn", path: "components/common/board-column.tsx" },
       { id: "feature-card", name: "FeatureCard", path: "components/common/feature-card.tsx" },
+      { id: "icon-badge", name: "IconBadge", path: "components/common/icon-badge.tsx" },
       {
         id: "password-strength-meter",
         name: "PasswordStrengthMeter",
@@ -424,14 +426,38 @@ export default function ComponentsPage() {
           </div>
         </Showcase>
 
-        <Showcase id="feature-card" summary="Feature highlight for brand-900 panels (sign-up brand panel).">
-          <Demo label="on brand-900" className="flex max-w-md flex-col gap-4 rounded-lg bg-brand-900 p-4">
+        <Showcase
+          id="feature-card"
+          summary="Feature highlight or numbered step for brand-900 panels (sign-up and forgot-password brand panels)."
+        >
+          <Demo label="icon + description (sign up)" className="flex max-w-md flex-col gap-4 rounded-lg bg-brand-900 p-4">
             <FeatureCard
               icon={SquareKanban}
               title="Boards and backlogs"
               description="Drag issues across columns and keep the backlog groomed."
             />
             <FeatureCard icon={ChartLine} title="Short description" description="One line." />
+          </Demo>
+          <Demo label="step, title only (forgot password)" className="max-w-md rounded-lg bg-brand-900 p-4">
+            <ol className="flex flex-col gap-3">
+              {["Enter the email you use for Taskify", "Open the recovery link we email you", "Choose a new password and log in"].map(
+                (title, i) => (
+                  <li key={title}>
+                    <FeatureCard step={i + 1} title={title} />
+                  </li>
+                ),
+              )}
+            </ol>
+          </Demo>
+          <Demo label="step + description" className="max-w-md rounded-lg bg-brand-900 p-4">
+            <FeatureCard step={1} title="With a description" description="The marker top-aligns when there are two lines." />
+          </Demo>
+        </Showcase>
+
+        <Showcase id="icon-badge" summary="Decorative icon in a light-blue circle above a card title (forgot password).">
+          <Demo label="icons in use">
+            <IconBadge icon={Lock} />
+            <IconBadge icon={MailCheck} />
           </Demo>
         </Showcase>
 
@@ -622,7 +648,9 @@ export default function ComponentsPage() {
             <code className="font-mono text-code">layout.tsx</code> passes <code className="font-mono text-code">headline</code>,{" "}
             <code className="font-mono text-code">subline</code> and <code className="font-mono text-code">panel</code>: the
             sample board (<code className="font-mono text-code">AuthBoardPreview</code>) on{" "}
-            <TextLink href="/login">/login</TextLink>, FeatureCards on <TextLink href="/signup">/signup</TextLink>.
+            <TextLink href="/login">/login</TextLink>, FeatureCards on <TextLink href="/signup">/signup</TextLink>, numbered
+            FeatureCards (<code className="font-mono text-code">step</code>) on{" "}
+            <TextLink href="/forgot-password">/forgot-password</TextLink>.
           </p>
         </Showcase>
       </main>

@@ -56,6 +56,9 @@ app/(auth)/login/
 
 app/(auth)/signup/             ← same pattern: layout.tsx, page.tsx, signup-form.tsx, signup-schema.ts
 
+app/(auth)/forgot-password/    ← same pattern: layout.tsx, page.tsx, forgot-password-form.tsx, forgot-password-schema.ts
+                                 (the form swaps to a "Check your email" view; see "Form that swaps to a success view")
+
 app/(auth)/reset-password/     ← same pattern for every other screen with a form
   page.tsx
   reset-password-form.tsx
@@ -628,6 +631,33 @@ function InviteEmails() {
 ```
 
 Note: field names like `emails.0` contain a dot, so `id={name}` still works with `getElementById` but not with CSS selectors without escaping. `FocusFirstError` queries by `aria-invalid`, so it is unaffected.
+
+### Form that swaps to a success view
+
+Forgot password: after a valid submit the card shows “Check your email” instead of the form. The screen form owns the whole card body (header included, since the title and icon change), and keeps the last email so “Use a different email” brings it back prefilled.
+
+```tsx
+// app/(auth)/forgot-password/forgot-password-form.tsx (shape)
+const [email, setEmail] = useState(forgotPasswordInitialValues.email);
+const [sent, setSent] = useState(false);
+
+if (sent) return <SentView email={email} onChangeEmail={() => setSent(false)} />;
+
+<Formik<ForgotPasswordValues>
+  initialValues={{ email }} // remounts when coming back, so no enableReinitialize
+  validationSchema={forgotPasswordSchema}
+  onSubmit={async (values, { setStatus }) => {
+    setStatus(undefined);
+    // TODO: connect to backend
+    setEmail(values.email);
+    setSent(true);
+  }}
+>
+```
+
+- The success view focuses its `h1` (`tabIndex={-1}`) on mount so screen readers announce the change.
+- Keep `FormErrorBanner` in the form view: once the backend is connected, failures go to `setStatus({ formError })` and the view does not switch.
+- Wording must not reveal whether an account exists (“If an account exists for …”).
 
 ### Async checks (e.g. “is this workspace URL free?”)
 
