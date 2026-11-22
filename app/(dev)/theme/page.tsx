@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Theme" };
 
@@ -115,6 +116,11 @@ export default function ThemePage() {
         <h1 className="text-page-title">Theme tokens</h1>
         <p className="text-body text-ink-muted">
           Every value below comes from the Taskify Design System. Use these classes when building components.
+          Built components are listed on{" "}
+          <Link href="/components" className="text-body-strong text-brand-600 hover:underline">
+            /components
+          </Link>
+          .
         </p>
       </header>
 
