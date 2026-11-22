@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, KeyRound, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, ChartLine, KeyRound, Plus, SquareKanban, Trash2 } from "lucide-react";
 
 import { BoardColumn } from "@/components/common/board-column";
+import { FeatureCard } from "@/components/common/feature-card";
 import { FormCheckbox } from "@/components/common/form-checkbox";
 import { FocusFirstError, FormErrorBanner } from "@/components/common/form-error-banner";
 import { FormPasswordField, FormTextField } from "@/components/common/form-text-field";
 import { IssueTypeIcon } from "@/components/common/issue-type-icon";
 import { Logo } from "@/components/common/logo";
 import { PasswordInput } from "@/components/common/password-input";
+import { PasswordStrengthMeter } from "@/components/common/password-strength-meter";
 import { TaskCard } from "@/components/common/task-card";
 import { TextLink } from "@/components/common/text-link";
 import { UserAvatar } from "@/components/common/user-avatar";
@@ -67,6 +69,12 @@ const GROUPS: { title: string; folder: string; entries: Entry[] }[] = [
       { id: "issue-type-icon", name: "IssueTypeIcon", path: "components/common/issue-type-icon.tsx" },
       { id: "task-card", name: "TaskCard", path: "components/common/task-card.tsx" },
       { id: "board-column", name: "BoardColumn", path: "components/common/board-column.tsx" },
+      { id: "feature-card", name: "FeatureCard", path: "components/common/feature-card.tsx" },
+      {
+        id: "password-strength-meter",
+        name: "PasswordStrengthMeter",
+        path: "components/common/password-strength-meter.tsx",
+      },
       { id: "form-text-field", name: "FormTextField", path: "components/common/form-text-field.tsx" },
       { id: "form-password-field", name: "FormPasswordField", path: "components/common/form-text-field.tsx" },
       { id: "form-checkbox", name: "FormCheckbox", path: "components/common/form-checkbox.tsx" },
@@ -416,9 +424,42 @@ export default function ComponentsPage() {
           </div>
         </Showcase>
 
+        <Showcase id="feature-card" summary="Feature highlight for brand-900 panels (sign-up brand panel).">
+          <Demo label="on brand-900" className="flex max-w-md flex-col gap-4 rounded-lg bg-brand-900 p-4">
+            <FeatureCard
+              icon={SquareKanban}
+              title="Boards and backlogs"
+              description="Drag issues across columns and keep the backlog groomed."
+            />
+            <FeatureCard icon={ChartLine} title="Short description" description="One line." />
+          </Demo>
+        </Showcase>
+
+        <Showcase
+          id="password-strength-meter"
+          summary="Four segments, one per check in newPasswordRule (8+ characters, letter, number, symbol). Use FormPasswordField `showStrength` in forms."
+        >
+          <Demo label="score 0 – 4" className="grid max-w-md gap-4">
+            {[
+              ["0 · empty", ""],
+              ["1 · weak", "abc"],
+              ["2 · fair", "abc1"],
+              ["3 · good", "abcdefg1"],
+              ["4 · strong", "abcdefg1!"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex flex-col gap-1">
+                <span className="text-small text-ink-muted">
+                  {label} <code className="font-mono text-code">{value && `"${value}"`}</code>
+                </span>
+                <PasswordStrengthMeter value={value} />
+              </div>
+            ))}
+          </Demo>
+        </Showcase>
+
         <Showcase
           id="form-text-field"
-          summary="Formik-aware Label + Input + error. Reads value, error and touched from Formik by `name`; the error shows once the field is touched. Render inside <Formik>."
+          summary="Formik-aware Label + Input + optional `description` hint + error. Reads value, error and touched from Formik by `name`; the error shows once the field is touched. Render inside <Formik>."
         >
           <Demo label="states" className="grid max-w-md gap-5">
             <DemoFormik initialValues={{ "ft-empty": "" }} rules={{ "ft-empty": "email" }}>
@@ -441,6 +482,19 @@ export default function ComponentsPage() {
             <DemoFormik initialValues={{ "ft-value": "Grace Song" }} rules={{ "ft-value": "name" }}>
               <FormTextField name="ft-value" label="Optional · with value" />
             </DemoFormik>
+            <DemoFormik initialValues={{ "ft-description": "" }} rules={{ "ft-description": "organisationName" }}>
+              <FormTextField
+                name="ft-description"
+                label="With description"
+                placeholder="e.g. Acme Engineering"
+                required
+                description={
+                  <>
+                    Your URL: <span className="font-semibold text-ink">taskify.app/your-organisation</span>
+                  </>
+                }
+              />
+            </DemoFormik>
             <DemoFormik initialValues={{ "ft-disabled": "you@company.com" }}>
               <FormTextField name="ft-disabled" label="Disabled" disabled />
             </DemoFormik>
@@ -449,7 +503,7 @@ export default function ComponentsPage() {
 
         <Showcase
           id="form-password-field"
-          summary="FormTextField with PasswordInput (Show / Hide). `labelAside` puts a link on the label row."
+          summary="FormTextField with PasswordInput (Show / Hide). `labelAside` puts a link on the label row; `showStrength` adds the strength meter (type to see it fill)."
         >
           <Demo label="states" className="grid max-w-md gap-5">
             <DemoFormik initialValues={{ "fp-empty": "" }} rules={{ "fp-empty": "password" }}>
@@ -473,13 +527,35 @@ export default function ComponentsPage() {
             >
               <FormPasswordField name="fp-error" label="New password · touched with error" required />
             </DemoFormik>
+            <DemoFormik initialValues={{ "fp-strength": "" }} rules={{ "fp-strength": "newPassword" }}>
+              <FormPasswordField
+                name="fp-strength"
+                label="New password · showStrength + description"
+                placeholder="Create a password"
+                required
+                showStrength
+                description="Use 8+ characters with letters, numbers and a symbol."
+              />
+            </DemoFormik>
+            <DemoFormik initialValues={{ "fp-strength-typed": "abcdefg1" }} rules={{ "fp-strength-typed": "newPassword" }}>
+              <FormPasswordField
+                name="fp-strength-typed"
+                label="showStrength · typed (3 of 4)"
+                required
+                showStrength
+                description="Use 8+ characters with letters, numbers and a symbol."
+              />
+            </DemoFormik>
             <DemoFormik initialValues={{ "fp-disabled": "secret-password" }}>
               <FormPasswordField name="fp-disabled" label="Disabled" disabled />
             </DemoFormik>
           </Demo>
         </Showcase>
 
-        <Showcase id="form-checkbox" summary="Checkbox + label bound to a boolean Formik field (uses setValue; Radix has no onChange).">
+        <Showcase
+          id="form-checkbox"
+          summary="Checkbox + label bound to a boolean Formik field (uses setValue; Radix has no onChange). `label` can hold links; an error shows once touched (e.g. must-accept terms)."
+        >
           <Demo label="states">
             <DemoFormik initialValues={{ "fc-off": false }}>
               <FormCheckbox name="fc-off" label="Unchecked" />
@@ -489,6 +565,27 @@ export default function ComponentsPage() {
             </DemoFormik>
             <DemoFormik initialValues={{ "fc-disabled": false }}>
               <FormCheckbox name="fc-disabled" label="Disabled" disabled />
+            </DemoFormik>
+          </Demo>
+          <Demo label="label with links · touched with error" className="grid max-w-md gap-5">
+            <DemoFormik initialValues={{ "fc-terms": false }} rules={{ "fc-terms": "acceptTerms" }}>
+              <FormCheckbox
+                name="fc-terms"
+                label={
+                  <>
+                    I agree to the <TextLink href="/terms" className="font-normal">Terms of service</TextLink> and{" "}
+                    <TextLink href="/privacy" className="font-normal">Privacy policy</TextLink>.
+                  </>
+                }
+              />
+            </DemoFormik>
+            <DemoFormik
+              initialValues={{ "fc-terms-error": false }}
+              rules={{ "fc-terms-error": "acceptTerms" }}
+              initialTouched={{ "fc-terms-error": true }}
+              initialErrors={{ "fc-terms-error": "Agree to the Terms of service and Privacy policy to continue." }}
+            >
+              <FormCheckbox name="fc-terms-error" label="I agree to the Terms of service and Privacy policy." />
             </DemoFormik>
           </Demo>
         </Showcase>
@@ -521,8 +618,11 @@ export default function ComponentsPage() {
 
         <Showcase id="auth-layout" summary="Full-page split screen; too big to preview inline.">
           <p className="text-body text-ink-muted">
-            Navy brand panel (40%, min 560px, hidden below lg) + centred form area. See it live on{" "}
-            <TextLink href="/login">/login</TextLink>.
+            Navy brand panel (40%, min 560px, hidden below lg) + centred form area. Each route&apos;s{" "}
+            <code className="font-mono text-code">layout.tsx</code> passes <code className="font-mono text-code">headline</code>,{" "}
+            <code className="font-mono text-code">subline</code> and <code className="font-mono text-code">panel</code>: the
+            sample board (<code className="font-mono text-code">AuthBoardPreview</code>) on{" "}
+            <TextLink href="/login">/login</TextLink>, FeatureCards on <TextLink href="/signup">/signup</TextLink>.
           </p>
         </Showcase>
       </main>

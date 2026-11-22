@@ -33,36 +33,45 @@ const PREVIEW: { title: string; count: number; tasks: ComponentProps<typeof Task
   },
 ];
 
-function BrandPanel() {
+/** Sample 3-column board for the brand panel (login). Decorative: the real board lives in the app. */
+export function AuthBoardPreview() {
   return (
-    <aside className="hidden flex-col gap-10 bg-brand-900 px-10 py-11 text-on-brand lg:flex xl:px-13">
-      <Logo tone="inverse" />
-      <div className="flex max-w-[480px] flex-col gap-3">
-        <p className="text-display">Plan sprints, track issues, ship together.</p>
-        <p className="text-body-lg text-on-brand-muted">
-          One board for your team’s backlog, in-flight work and releases.
-        </p>
-      </div>
-      {/* Decorative: the real board lives in the app. */}
-      <div aria-hidden="true" inert className="grid max-w-[480px] grid-cols-3 gap-3">
-        {PREVIEW.map((col) => (
-          <BoardColumn key={col.title} title={col.title} count={col.count} tone="inverse">
-            {col.tasks.map((t) => (
-              <TaskCard key={t.taskKey} {...t} />
-            ))}
-          </BoardColumn>
-        ))}
-      </div>
-    </aside>
+    <div aria-hidden="true" inert className="grid max-w-[480px] grid-cols-3 gap-3">
+      {PREVIEW.map((col) => (
+        <BoardColumn key={col.title} title={col.title} count={col.count} tone="inverse">
+          {col.tasks.map((t) => (
+            <TaskCard key={t.taskKey} {...t} />
+          ))}
+        </BoardColumn>
+      ))}
+    </div>
   );
 }
 
-/** Split auth screen: brand panel on the left (lg+), form area on the right. */
-export function AuthLayout({ children }: { children: ReactNode }) {
+type AuthLayoutProps = {
+  /** Big panel headline, e.g. "Plan sprints, track issues, ship together." */
+  headline: string;
+  /** Line under the headline */
+  subline: string;
+  /** Panel body under the headline, e.g. <AuthBoardPreview /> or a list of FeatureCards */
+  panel: ReactNode;
+  /** The form card */
+  children: ReactNode;
+};
+
+/** Split auth screen: brand panel on the left (lg+), form area on the right. Each route's layout picks the panel. */
+export function AuthLayout({ headline, subline, panel, children }: AuthLayoutProps) {
   return (
     // Panel: 40% of the screen, but never under 560px so the sample board fits.
     <div className="grid min-h-dvh flex-1 lg:grid-cols-[minmax(560px,2fr)_3fr]">
-      <BrandPanel />
+      <aside className="hidden flex-col gap-10 bg-brand-900 px-10 py-11 text-on-brand lg:flex xl:px-13">
+        <Logo tone="inverse" />
+        <div className="flex max-w-[480px] flex-col gap-3">
+          <p className="text-display">{headline}</p>
+          <p className="text-body-lg text-on-brand-muted">{subline}</p>
+        </div>
+        {panel}
+      </aside>
       <main className="flex flex-col items-center justify-center gap-8 bg-surface-sunken px-4 py-10 sm:px-6">
         <Logo className="lg:hidden" />
         {children}
