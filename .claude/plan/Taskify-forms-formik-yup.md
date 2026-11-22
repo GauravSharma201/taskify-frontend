@@ -38,6 +38,7 @@ Each form lives **in the route folder of the screen that uses it**, together wit
 ```
 lib/validation/
   rules.ts                     ← reusable field rules: emailRule, passwordRule, newPasswordRule …
+  password-strength.ts         ← getPasswordStrength (0–4), same checks as newPasswordRule
 
 hooks/
   use-form-field-props.ts      ← shared hook used by the form inputs below
@@ -48,9 +49,12 @@ components/common/
   form-error-banner.tsx        ← FormErrorBanner + FocusFirstError
 
 app/(auth)/login/
+  layout.tsx                   ← AuthLayout with this screen's brand panel (each auth route has its own)
   page.tsx                     ← the route (server component, renders <LoginForm />)
   login-form.tsx               ← the login form: <Formik>, initial values, onSubmit
   login-schema.ts              ← loginSchema, LoginValues, loginInitialValues (built from rules.ts)
+
+app/(auth)/signup/             ← same pattern: layout.tsx, page.tsx, signup-form.tsx, signup-schema.ts
 
 app/(auth)/reset-password/     ← same pattern for every other screen with a form
   page.tsx
@@ -137,12 +141,20 @@ export const emailRule = yup
 /** Signing in: any non-empty password. */
 export const passwordRule = yup.string().required("Enter your password.");
 
-/** Creating or resetting a password: strength rules. */
+/** Character checks shared by `newPasswordRule` and the password strength meter. */
+export const HAS_LETTER = /[A-Za-z]/;
+export const HAS_NUMBER = /[0-9]/;
+export const HAS_SYMBOL = /[^A-Za-z0-9]/;
+export const MIN_PASSWORD_LENGTH = 8;
+
+/** Creating or resetting a password: 8+ characters with letters, numbers and a symbol. */
 export const newPasswordRule = yup
   .string()
   .required("Enter a password.")
-  .min(8, "Use at least 8 characters.")
-  .matches(/[0-9]/, "Include at least one number.");
+  .min(MIN_PASSWORD_LENGTH, "Use at least 8 characters.")
+  .matches(HAS_LETTER, "Include at least one letter.")
+  .matches(HAS_NUMBER, "Include at least one number.")
+  .matches(HAS_SYMBOL, "Include at least one symbol.");
 
 /** Confirm field that must match another field (default: "password"). */
 export const confirmPasswordRule = (field = "password") =>
@@ -156,6 +168,20 @@ export const nameRule = yup
   .trim()
   .required("Enter your name.")
   .max(100, "Keep it under 100 characters.");
+
+/** Organisation name; its slug (`toSlug` in lib/slug.ts) becomes the URL taskify.app/{slug}. */
+export const organisationNameRule = yup
+  .string()
+  .trim()
+  .required("Enter your organisation name.")
+  .max(50, "Keep it under 50 characters.")
+  .test("has-slug", "Use at least one letter or number.", (value) => !value || toSlug(value) !== "");
+
+/** Must be ticked. A .test (not .oneOf([true])) keeps the inferred type `boolean`, so initial values can be `false`. */
+export const acceptTermsRule = yup
+  .boolean()
+  .required()
+  .test("accepted", "Agree to the Terms of service and Privacy policy to continue.", (value) => value === true);
 ```
 
 Need a different message on one screen? Chain an override; the shared rule is not changed:
@@ -174,12 +200,13 @@ export const loginSchema = yup.object({
   remember: yup.boolean().default(false),
 });
 
-// app/(auth)/sign-up/sign-up-schema.ts
-export const signUpSchema = yup.object({
-  name: nameRule,
-  email: emailRule,
+// app/(auth)/signup/signup-schema.ts
+export const signupSchema = yup.object({
+  fullName: nameRule.required("Enter your full name."),
+  email: emailRule.required("Enter your work email."),
   password: newPasswordRule,
-  confirmPassword: confirmPasswordRule(),
+  organisationName: organisationNameRule,
+  acceptTerms: acceptTermsRule,
 });
 ```
 
@@ -189,9 +216,9 @@ Five small pieces; every screen form uses them instead of wiring `useField`, `ar
 
 | Piece | Wraps | Job |
 | --- | --- | --- |
-| `FormTextField` | `Field` + `FieldLabel` + `Input` + `FieldError` | Text, email, number inputs |
-| `FormPasswordField` | Same, with `PasswordInput` | Password with Show/Hide |
-| `FormCheckbox` | `Field` + Radix `Checkbox` | Booleans (Radix uses `onCheckedChange`, not `onChange`) |
+| `FormTextField` | `Field` + `FieldLabel` + `Input` + `FieldDescription` + `FieldError` | Text, email, number inputs; optional `description` hint |
+| `FormPasswordField` | Same, with `PasswordInput` (+ `PasswordStrengthMeter` with `showStrength`) | Password with Show/Hide; strength meter for new passwords |
+| `FormCheckbox` | `Field` + Radix `Checkbox` + `FieldError` | Booleans (Radix uses `onCheckedChange`, not `onChange`); `label` may contain links; shows an error once touched |
 | `FormErrorBanner` | The warning `<p role="alert">` | Shows `status.formError` |
 | `FocusFirstError` | Nothing visible | Moves focus to the first invalid field after a failed submit |
 
@@ -205,26 +232,36 @@ One place that turns Formik state into input props and accessibility attributes.
 
 import { useField } from "formik";
 
-export function useFormFieldProps(name: string) {
+type Options = {
+  /** The field renders a description (hint) with id `${name}-description` */
+  hasDescription?: boolean;
+};
+
+export function useFormFieldProps(name: string, { hasDescription = false }: Options = {}) {
   const [field, meta] = useField<string>(name);
   // Only show an error once the user has left the field (or submitted)
   const error = meta.touched ? meta.error : undefined;
   const errorId = `${name}-error`;
+  const descriptionId = `${name}-description`;
+  const describedBy = [hasDescription && descriptionId, error && errorId].filter(Boolean).join(" ");
 
   return {
     error,
     errorId,
+    descriptionId,
     inputProps: {
       ...field, // name, value, onChange, onBlur
       id: name,
       "aria-invalid": error ? true : undefined,
-      "aria-describedby": error ? errorId : undefined,
+      "aria-describedby": describedBy || undefined,
     },
   };
 }
 ```
 
 ### `FormTextField` and `FormPasswordField`
+
+`description` renders a hint under the input (linked with `aria-describedby`); `showStrength` adds the `PasswordStrengthMeter`.
 
 ```tsx
 // components/common/form-text-field.tsx
@@ -233,47 +270,84 @@ export function useFormFieldProps(name: string) {
 import type { ComponentProps, ReactNode } from "react";
 
 import { PasswordInput } from "@/components/common/password-input";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { PasswordStrengthMeter } from "@/components/common/password-strength-meter";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useFormFieldProps } from "@/hooks/use-form-field-props";
 
 type BaseProps = {
+  /** Formik field name; also used as the input `id` */
   name: string;
   label: string;
   required?: boolean;
   /** Extra content on the label row, e.g. a "Forgot password?" link */
   labelAside?: ReactNode;
+  /** Hint under the input, e.g. password rules or a URL preview; linked with `aria-describedby` */
+  description?: ReactNode;
 };
+
+function LabelRow({ name, label, required, labelAside }: Omit<BaseProps, "description">) {
+  return (
+    <div className="flex items-center justify-between">
+      <FieldLabel htmlFor={name} required={required}>
+        {label}
+      </FieldLabel>
+      {labelAside}
+    </div>
+  );
+}
 
 type FormTextFieldProps = BaseProps &
   Omit<ComponentProps<typeof Input>, "name" | "id" | "value" | "onChange" | "onBlur">;
 
-export function FormTextField({ name, label, required, labelAside, ...rest }: FormTextFieldProps) {
-  const { error, errorId, inputProps } = useFormFieldProps(name);
+/** Label + Input + optional hint + error, wired to Formik by `name`. Render inside <Formik>. */
+export function FormTextField({ name, label, required, labelAside, description, ...rest }: FormTextFieldProps) {
+  const { error, errorId, descriptionId, inputProps } = useFormFieldProps(name, {
+    hasDescription: !!description,
+  });
   return (
     <Field data-invalid={!!error || undefined}>
-      <div className="flex items-center justify-between">
-        <FieldLabel htmlFor={name} required={required}>{label}</FieldLabel>
-        {labelAside}
-      </div>
+      <LabelRow name={name} label={label} required={required} labelAside={labelAside} />
       <Input {...rest} {...inputProps} aria-required={required || undefined} />
+      {description && (
+        <FieldDescription id={descriptionId} className="m-0 text-ink-muted">
+          {description}
+        </FieldDescription>
+      )}
       <FieldError id={errorId}>{error}</FieldError>
     </Field>
   );
 }
 
 type FormPasswordFieldProps = BaseProps &
-  Omit<ComponentProps<typeof PasswordInput>, "name" | "id" | "value" | "onChange" | "onBlur">;
+  Omit<ComponentProps<typeof PasswordInput>, "name" | "id" | "value" | "onChange" | "onBlur"> & {
+    /** Show the 4-segment strength meter under the input (for new passwords) */
+    showStrength?: boolean;
+  };
 
-export function FormPasswordField({ name, label, required, labelAside, ...rest }: FormPasswordFieldProps) {
-  const { error, errorId, inputProps } = useFormFieldProps(name);
+/** Label + PasswordInput (Show/Hide) + optional strength meter and hint + error, wired to Formik. */
+export function FormPasswordField({
+  name,
+  label,
+  required,
+  labelAside,
+  description,
+  showStrength,
+  ...rest
+}: FormPasswordFieldProps) {
+  const { error, errorId, descriptionId, inputProps } = useFormFieldProps(name, {
+    hasDescription: !!description,
+  });
   return (
     <Field data-invalid={!!error || undefined}>
-      <div className="flex items-center justify-between">
-        <FieldLabel htmlFor={name} required={required}>{label}</FieldLabel>
-        {labelAside}
-      </div>
+      <LabelRow name={name} label={label} required={required} labelAside={labelAside} />
       <PasswordInput {...rest} {...inputProps} aria-required={required || undefined} />
+      {showStrength && <PasswordStrengthMeter value={inputProps.value ?? ""} />}
+      {description && (
+        <FieldDescription id={descriptionId} className="m-0 text-ink-muted">
+          {description}
+        </FieldDescription>
+      )}
       <FieldError id={errorId}>{error}</FieldError>
     </Field>
   );
@@ -282,31 +356,54 @@ export function FormPasswordField({ name, label, required, labelAside, ...rest }
 
 ### `FormCheckbox`
 
-Radix `Checkbox` is a `<button>`, not an `<input>`, so Formik's `onChange` does not fit. We set the value through `helpers.setValue`.
+Radix `Checkbox` is a `<button>`, not an `<input>`, so Formik's `onChange` does not fit. We set the value through `helpers.setValue`. The label may contain links (e.g. Terms / Privacy), and a schema error (e.g. `acceptTermsRule`) shows once touched.
 
 ```tsx
 // components/common/form-checkbox.tsx
 "use client";
 
+import type { ReactNode } from "react";
 import { useField } from "formik";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 
-type FormCheckboxProps = { name: string; label: string; disabled?: boolean };
+type FormCheckboxProps = {
+  /** Formik field name (boolean value); also used as the checkbox `id` */
+  name: string;
+  /** Text or inline content, e.g. "I agree to the <TextLink>Terms</TextLink>" */
+  label: ReactNode;
+  disabled?: boolean;
+};
 
+/**
+ * Checkbox + label wired to a boolean Formik field, with an error once touched
+ * (e.g. a must-accept terms box). Render inside <Formik>.
+ * Radix Checkbox is a <button>, so the value is set with `helpers.setValue`, not `onChange`.
+ */
 export function FormCheckbox({ name, label, disabled }: FormCheckboxProps) {
-  const [field, , helpers] = useField<boolean>(name);
+  const [field, meta, helpers] = useField<boolean>(name);
+  const error = meta.touched ? meta.error : undefined;
+  const errorId = `${name}-error`;
+
   return (
-    <Field orientation="horizontal" data-disabled={disabled || undefined}>
-      <Checkbox
-        id={name}
-        checked={field.value}
-        disabled={disabled}
-        onCheckedChange={(checked) => helpers.setValue(checked === true)}
-        onBlur={() => helpers.setTouched(true)}
-      />
-      <FieldLabel htmlFor={name} className="text-body text-ink">{label}</FieldLabel>
+    <Field data-invalid={!!error || undefined} data-disabled={disabled || undefined} className="gap-1.5">
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id={name}
+          checked={field.value}
+          disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          onCheckedChange={(checked) => helpers.setValue(checked === true)}
+          onBlur={() => helpers.setTouched(true)}
+          className="mt-0.5"
+        />
+        <FieldLabel htmlFor={name} className="block text-body font-normal text-ink">
+          {label}
+        </FieldLabel>
+      </div>
+      <FieldError id={errorId}>{error}</FieldError>
     </Field>
   );
 }

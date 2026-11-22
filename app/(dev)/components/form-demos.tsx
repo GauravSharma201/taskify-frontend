@@ -4,7 +4,14 @@ import type { ReactNode } from "react";
 import { Form, Formik, type FormikErrors, type FormikTouched } from "formik";
 import * as yup from "yup";
 
-import { emailRule, nameRule, newPasswordRule, passwordRule } from "@/lib/validation/rules";
+import {
+  acceptTermsRule,
+  emailRule,
+  nameRule,
+  newPasswordRule,
+  organisationNameRule,
+  passwordRule,
+} from "@/lib/validation/rules";
 
 /** Rules a demo field can use. Keys are strings so the server gallery page can pass them. */
 const RULES = {
@@ -12,6 +19,8 @@ const RULES = {
   password: passwordRule,
   newPassword: newPasswordRule,
   name: nameRule,
+  organisationName: organisationNameRule,
+  acceptTerms: acceptTermsRule,
 } as const;
 
 type DemoValues = Record<string, string | boolean>;
