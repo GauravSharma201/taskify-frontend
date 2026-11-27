@@ -64,10 +64,10 @@ export function SignupForm() {
                 required
                 description={
                   <>
-                    Your URL:{" "}
+                    {/* Your URL:{" "}
                     <span className="font-semibold text-ink">
                       taskify.app/{toSlug(values.organisationName) || "your-organisation"}
-                    </span>
+                    </span> */}
                   </>
                 }
               />
