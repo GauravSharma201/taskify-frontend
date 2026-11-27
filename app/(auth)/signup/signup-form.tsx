@@ -54,7 +54,7 @@ export function SignupForm() {
                 placeholder="Create a password"
                 required
                 showStrength
-                description="Use 8+ characters with letters, numbers and a symbol."
+                description="Use 8+ characters with upper and lower case letters, a number and a symbol."
               />
               <FormTextField
                 name="organisationName"
