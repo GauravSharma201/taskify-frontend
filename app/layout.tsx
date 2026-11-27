@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 import { QueryProvider } from "@/components/providers/query-provider";
+import { StoreProvider } from "@/components/providers/store-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,7 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {/* Wraps only {children}, as deep as possible, so <html>/<body> stay static */}
-        <QueryProvider>{children}</QueryProvider>
+        <StoreProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </StoreProvider>
       </body>
     </html>
   );
