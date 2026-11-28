@@ -56,6 +56,7 @@ export const organisationNameRule = yup
   .string()
   .trim()
   .required("Enter your organisation name.")
+  .min(2, "Use at least 2 characters.") // backend: 2–100 after trimming
   .max(50, "Keep it under 50 characters.")
   .test("has-slug", "Use at least one letter or number.", (value) => !value || toSlug(value) !== "");
 
