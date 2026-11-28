@@ -28,3 +28,21 @@ export async function register(body: RegisterRequest): Promise<RegisterResponse>
   const { data } = await apiClient.post<RegisterResponse>("/auth/register", body);
   return data;
 }
+
+/** Body of POST /auth/login. */
+export type LoginRequest = {
+  email: string;
+  password: string;
+  verificationToken?: string; // only sent when present; "" counts as no token
+};
+
+/** 200 body of POST /auth/login. Cookies are set by the browser; no token is in the response body. */
+export type LoginResponse = {
+  message: string;
+};
+
+/** Authenticates a user. On success the browser receives httpOnly accessToken + refreshToken cookies. */
+export async function login(body: LoginRequest): Promise<LoginResponse> {
+  const { data } = await apiClient.post<LoginResponse>("/auth/login", body);
+  return data;
+}
