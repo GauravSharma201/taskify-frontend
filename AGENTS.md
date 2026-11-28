@@ -13,7 +13,20 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 This is a frontend-only app. A separate backend already serves it, so do not build server logic here: no server actions (`"use server"`), no route handlers (`app/**/route.ts`), no database or auth code.
 
 - Forms validate in the browser (Formik + Yup) and stop at `onSubmit`. Leave a `// TODO: connect to backend` there instead of calling anything.
-- Do not connect to the backend (no API client, `fetch` calls or env vars for it) until the user asks for it.
+- All backend calls go through `apiClient` (`lib/api/client.ts`); never call `fetch` or bare `axios` directly. It rejects with `ApiError` (`lib/api/errors.ts`). See `docs/wiring/axios-setup.md`.
+- Data from the backend is read with TanStack Query (`useQuery`) and changed with `useMutation`; their `queryFn` / `mutationFn` call `apiClient`. Don't keep server data in `useState`. See `docs/wiring/tanstack-query-setup.md`.
+- A screen calls the backend only when the user asks for that screen to be connected. Until then its `onSubmit` keeps `// TODO: connect to backend`.
+
+## Connecting a screen: plan its logic first
+
+Before writing any API code for a screen, read `docs/screen-logic-workflow.md` and follow its **Workflow**:
+
+1. Write the screen's logic doc at `docs/logic/<screen>.md` from the template there: triggers, APIs (query or mutation), request shaping, response map, state placement, side effects.
+2. Classify every API function, query key, hook, Redux slice and helper as **Reuse / Extend / New** against `docs/state-inventory.md`.
+3. Share the logic doc and wait for approval before implementing.
+4. After implementing, set the logic doc to `implemented` and update `docs/state-inventory.md` in the same change.
+
+Where state lives, first match wins: backend data → TanStack Query · survives reload / shareable → URL · form input → Formik · needed by distant components or across routes → Redux (`lib/store/slices/`, via `useAppSelector` / `useAppDispatch` from `lib/store/hooks.ts`) · anything else → `useState`. Never copy backend data into Redux, never use plain `useSelector` / `useDispatch`, never keep passwords or tokens in JS state.
 
 ## Forms: Formik + Yup
 

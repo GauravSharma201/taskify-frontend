@@ -463,15 +463,15 @@ export default function ComponentsPage() {
 
         <Showcase
           id="password-strength-meter"
-          summary="Four segments, one per check in newPasswordRule (8+ characters, letter, number, symbol). Use FormPasswordField `showStrength` in forms."
+          summary="Four segments, one per check in newPasswordRule (8+ characters, upper + lower case, number, symbol). Use FormPasswordField `showStrength` in forms."
         >
           <Demo label="score 0 – 4" className="grid max-w-md gap-4">
             {[
               ["0 · empty", ""],
-              ["1 · weak", "abc"],
-              ["2 · fair", "abc1"],
-              ["3 · good", "abcdefg1"],
-              ["4 · strong", "abcdefg1!"],
+              ["1 · weak", "Abc"],
+              ["2 · fair", "Abc1"],
+              ["3 · good", "Abcdefg1"],
+              ["4 · strong", "Abcdefg1!"],
             ].map(([label, value]) => (
               <div key={label} className="flex flex-col gap-1">
                 <span className="text-small text-ink-muted">
@@ -560,16 +560,16 @@ export default function ComponentsPage() {
                 placeholder="Create a password"
                 required
                 showStrength
-                description="Use 8+ characters with letters, numbers and a symbol."
+                description="Use 8+ characters with upper and lower case letters, a number and a symbol."
               />
             </DemoFormik>
-            <DemoFormik initialValues={{ "fp-strength-typed": "abcdefg1" }} rules={{ "fp-strength-typed": "newPassword" }}>
+            <DemoFormik initialValues={{ "fp-strength-typed": "Abcdefg1" }} rules={{ "fp-strength-typed": "newPassword" }}>
               <FormPasswordField
                 name="fp-strength-typed"
                 label="showStrength · typed (3 of 4)"
                 required
                 showStrength
-                description="Use 8+ characters with letters, numbers and a symbol."
+                description="Use 8+ characters with upper and lower case letters, a number and a symbol."
               />
             </DemoFormik>
             <DemoFormik initialValues={{ "fp-disabled": "secret-password" }}>
