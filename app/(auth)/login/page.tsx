@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { TextLink } from "@/components/common/text-link";
@@ -27,7 +28,10 @@ export default function LoginPage() {
       </CardHeader>
 
       <CardContent className="flex flex-col gap-6 px-0">
-        <LoginForm />
+        {/* LoginForm calls useSearchParams() — Suspense is required by Next.js App Router */}
+        <Suspense fallback={null}>
+          <LoginForm />
+        </Suspense>
         <p className="text-center text-body text-ink-muted">
           New to Taskify? <TextLink href="/signup">Create an account</TextLink>
         </p>
